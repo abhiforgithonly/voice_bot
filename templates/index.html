@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Interview Voice Bot</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #343541;
+            color: #ececf1;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background: #202123;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #444654;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #444654;
+        }
+
+        .new-chat-btn {
+            width: 100%;
+            padding: 12px;
+            background: #343541;
+            color: #ececf1;
+            border: 1px solid #565869;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .new-chat-btn:hover {
+            background: #40414f;
+        }
+
+        .conversations-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .conversation-item {
+            padding: 12px;
+            margin-bottom: 5px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.2s;
+            position: relative;
+            font-size: 14px;
+        }
+
+        .conversation-item:hover {
+            background: #343541;
+        }
+
+        .conversation-item.active {
+            background: #343541;
+        }
+
+        .conversation-title {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .conversation-actions {
+            display: none;
+            gap: 5px;
+        }
+
+        .conversation-item:hover .conversation-actions {
+            display: flex;
+        }
+
+        .action-btn {
+            background: none;
+            border: none;
+            color: #ececf1;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .action-btn:hover {
+            background: #40414f;
+        }
+
+        /* Main chat area */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #343541;
+        }
+
+        .chat-header {
+            padding: 20px;
+            border-bottom: 1px solid #444654;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-badge.idle {
+            background: #10a37f;
+            color: white;
+        }
+
+        .status-badge.listening {
+            background: #ff9800;
+            color: white;
+            animation: pulse 1.5s infinite;
+        }
+
+        .status-badge.processing {
+            background: #2196f3;
+            color: white;
+        }
+
+        .status-badge.speaking {
+            background: #9c27b0;
+            color: white;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .message {
+            display: flex;
+            gap: 15px;
+            padding: 15px;
+            border-radius: 8px;
+            position: relative;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            background: #444654;
+        }
+
+        .message.assistant {
+            background: #343541;
+        }
+
+        .message-avatar {
+            width: 35px;
+            height: 35px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .message.user .message-avatar {
+            background: #5436da;
+        }
+
+        .message.assistant .message-avatar {
+            background: #10a37f;
+        }
+
+        .message-content {
+            flex: 1;
+            line-height: 1.6;
+        }
+
+        .message-actions {
+            display: none;
+            gap: 8px;
+            position: absolute;
+            right: 15px;
+            top: 15px;
+        }
+
+        .message:hover .message-actions {
+            display: flex;
+        }
+
+        .message-btn {
+            background: #40414f;
+            border: none;
+            color: #ececf1;
+            cursor: pointer;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .message-btn:hover {
+            background: #565869;
+        }
+
+        .edited-label {
+            font-size: 11px;
+            color: #8e8ea0;
+            font-style: italic;
+        }
+
+        /* Input area */
+        .chat-input-container {
+            padding: 20px;
+            border-top: 1px solid #444654;
+        }
+
+        .chat-input-wrapper {
+            background: #40414f;
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .voice-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .voice-btn {
+            width: 45px;
+            height: 45px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .voice-btn.record {
+            background: #10a37f;
+            color: white;
+        }
+
+        .voice-btn.record:hover:not(:disabled) {
+            background: #0d8c6f;
+        }
+
+        .voice-btn.record.recording {
+            background: #ef4444;
+            animation: pulse 1.5s infinite;
+        }
+
+        .voice-btn.stop {
+            background: #ef4444;
+            color: white;
+        }
+
+        .voice-btn.stop:hover:not(:disabled) {
+            background: #dc2626;
+        }
+
+        .voice-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Edit modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #343541;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .modal-header {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 12px;
+            background: #40414f;
+            border: 1px solid #565869;
+            border-radius: 8px;
+            color: #ececf1;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .modal-textarea {
+            width: 100%;
+            padding: 12px;
+            background: #40414f;
+            border: 1px solid #565869;
+            border-radius: 8px;
+            color: #ececf1;
+            font-size: 14px;
+            min-height: 100px;
+            margin-bottom: 20px;
+            resize: vertical;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .modal-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .modal-btn.primary {
+            background: #10a37f;
+            color: white;
+        }
+
+        .modal-btn.primary:hover {
+            background: #0d8c6f;
+        }
+
+        .modal-btn.secondary {
+            background: #565869;
+            color: #ececf1;
+        }
+
+        .modal-btn.secondary:hover {
+            background: #6e6e80;
+        }
+
+        .empty-state {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 20px;
+            color: #8e8ea0;
+        }
+
+        .empty-state-icon {
+            font-size: 60px;
+        }
+
+        .empty-state-text {
+            font-size: 18px;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #202123;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #565869;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6e6e80;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <button class="new-chat-btn" onclick="createNewConversation()">
+                    <span>➕</span>
+                    New Chat
+                </button>
+            </div>
+            <div class="conversations-list" id="conversationsList"></div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="chat-header">
+                <div class="chat-title" id="chatTitle">AI Interview Bot</div>
+                <div class="status-badge idle" id="statusBadge">Ready</div>
+            </div>
+
+            <div class="chat-messages" id="chatMessages">
+                <div class="empty-state">
+                    <div class="empty-state-icon">🎤</div>
+                    <div class="empty-state-text">Start a conversation</div>
+                </div>
+            </div>
+
+            <div class="chat-input-container">
+                <div class="chat-input-wrapper">
+                    <div class="voice-controls">
+                        <button class="voice-btn record" id="recordBtn" onclick="startRecording()">
+                            🎤
+                        </button>
+                        <button class="voice-btn stop" id="stopBtn" onclick="stopRecording()" disabled>
+                            ⏹️
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Conversation Modal -->
+    <div class="modal" id="editConvModal">
+        <div class="modal-content">
+            <div class="modal-header">Edit Conversation Title</div>
+            <input type="text" class="modal-input" id="editConvInput" placeholder="Enter new title">
+            <div class="modal-actions">
+                <button class="modal-btn secondary" onclick="closeEditConvModal()">Cancel</button>
+                <button class="modal-btn primary" onclick="saveConvTitle()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Message Modal -->
+    <div class="modal" id="editMsgModal">
+        <div class="modal-content">
+            <div class="modal-header">Edit Message</div>
+            <textarea class="modal-textarea" id="editMsgInput" placeholder="Enter new message"></textarea>
+            <div class="modal-actions">
+                <button class="modal-btn secondary" onclick="closeEditMsgModal()">Cancel</button>
+                <button class="modal-btn primary" onclick="saveMsgContent()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+        let currentConversationId = null;
+        let conversations = [];
+        let editingConvId = null;
+        let editingMsgId = null;
+        let currentAudio = null;
+
+        // Load conversations on page load
+        loadConversations();
+
+        async function loadConversations() {
+            try {
+                const response = await fetch('/api/conversations');
+                const data = await response.json();
+                conversations = data.conversations;
+                renderConversations();
+            } catch (error) {
+                console.error('Error loading conversations:', error);
+            }
+        }
+
+        function renderConversations() {
+            const list = document.getElementById('conversationsList');
+            list.innerHTML = '';
+
+            conversations.forEach(conv => {
+                const div = document.createElement('div');
+                div.className = `conversation-item ${conv.id === currentConversationId ? 'active' : ''}`;
+                div.innerHTML = `
+                    <div class="conversation-title">${conv.title}</div>
+                    <div class="conversation-actions">
+                        <button class="action-btn" onclick="editConversation('${conv.id}', '${conv.title.replace(/'/g, "\\'")}')">✏️</button>
+                        <button class="action-btn" onclick="deleteConversation('${conv.id}')">🗑️</button>
+                    </div>
+                `;
+                div.onclick = (e) => {
+                    if (!e.target.classList.contains('action-btn')) {
+                        loadConversation(conv.id);
+                    }
+                };
+                list.appendChild(div);
+            });
+        }
+
+        async function createNewConversation() {
+            try {
+                const response = await fetch('/api/conversations', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: 'New Chat' })
+                });
+                const conv = await response.json();
+                currentConversationId = conv.id;
+                await loadConversations();
+                loadConversation(conv.id);
+            } catch (error) {
+                console.error('Error creating conversation:', error);
+            }
+        }
+
+        async function loadConversation(convId) {
+            try {
+                currentConversationId = convId;
+                const response = await fetch(`/api/conversations/${convId}`);
+                const conv = await response.json();
+                
+                document.getElementById('chatTitle').textContent = conv.title;
+                
+                const messagesDiv = document.getElementById('chatMessages');
+                messagesDiv.innerHTML = '';
+                
+                conv.messages.forEach(msg => {
+                    addMessageToUI(msg);
+                });
+                
+                if (conv.messages.length === 0) {
+                    messagesDiv.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🎤</div>
+                            <div class="empty-state-text">Start recording to answer interview questions</div>
+                        </div>
+                    `;
+                }
+                
+                renderConversations();
+            } catch (error) {
+                console.error('Error loading conversation:', error);
+            }
+        }
+
+        function editConversation(convId, title) {
+            editingConvId = convId;
+            document.getElementById('editConvInput').value = title;
+            document.getElementById('editConvModal').classList.add('active');
+        }
+
+        async function saveConvTitle() {
+            try {
+                const newTitle = document.getElementById('editConvInput').value;
+                await fetch(`/api/conversations/${editingConvId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: newTitle })
+                });
+                await loadConversations();
+                if (currentConversationId === editingConvId) {
+                    document.getElementById('chatTitle').textContent = newTitle;
+                }
+                closeEditConvModal();
+            } catch (error) {
+                console.error('Error updating conversation:', error);
+            }
+        }
+
+        function closeEditConvModal() {
+            document.getElementById('editConvModal').classList.remove('active');
+            editingConvId = null;
+        }
+
+        async function deleteConversation(convId) {
+            if (!confirm('Delete this conversation?')) return;
+            
+            try {
+                await fetch(`/api/conversations/${convId}`, { method: 'DELETE' });
+                await loadConversations();
+                
+                if (currentConversationId === convId) {
+                    currentConversationId = null;
+                    document.getElementById('chatMessages').innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🎤</div>
+                            <div class="empty-state-text">Start a new conversation</div>
+                        </div>
+                    `;
+                    document.getElementById('chatTitle').textContent = 'AI Interview Bot';
+                }
+            } catch (error) {
+                console.error('Error deleting conversation:', error);
+            }
+        }
+
+        function editMessage(convId, msgId, content) {
+            editingMsgId = msgId;
+            currentConversationId = convId;
+            document.getElementById('editMsgInput').value = content;
+            document.getElementById('editMsgModal').classList.add('active');
+        }
+
+        async function saveMsgContent() {
+            try {
+                const newContent = document.getElementById('editMsgInput').value;
+                await fetch(`/api/conversations/${currentConversationId}/messages/${editingMsgId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: newContent })
+                });
+                loadConversation(currentConversationId);
+                closeEditMsgModal();
+            } catch (error) {
+                console.error('Error updating message:', error);
+            }
+        }
+
+        function closeEditMsgModal() {
+            document.getElementById('editMsgModal').classList.remove('active');
+            editingMsgId = null;
+        }
+
+        async function deleteMessage(convId, msgId) {
+            if (!confirm('Delete this message?')) return;
+            
+            try {
+                await fetch(`/api/conversations/${convId}/messages/${msgId}`, { method: 'DELETE' });
+                loadConversation(convId);
+            } catch (error) {
+                console.error('Error deleting message:', error);
+            }
+        }
+
+        function addMessageToUI(msg) {
+            const messagesDiv = document.getElementById('chatMessages');
+            
+            // Remove empty state if exists
+            const emptyState = messagesDiv.querySelector('.empty-state');
+            if (emptyState) emptyState.remove();
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${msg.role}`;
+            messageDiv.innerHTML = `
+                <div class="message-avatar">${msg.role === 'user' ? '👤' : '🤖'}</div>
+                <div class="message-content">
+                    ${msg.content}
+                    ${msg.edited ? '<div class="edited-label">Edited</div>' : ''}
+                </div>
+                <div class="message-actions">
+                    <button class="message-btn" onclick="editMessage('${currentConversationId}', '${msg.id}', '${msg.content.replace(/'/g, "\\'")}')">Edit</button>
+                    <button class="message-btn" onclick="deleteMessage('${currentConversationId}', '${msg.id}')">Delete</button>
+                </div>
+            `;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function updateStatus(state, text) {
+            const badge = document.getElementById('statusBadge');
+            badge.className = `status-badge ${state}`;
+            badge.textContent = text;
+        }
+
+        async function startRecording() {
+            if (!currentConversationId) {
+                await createNewConversation();
+            }
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    await processAudio(audioBlob);
+                    stream.getTracks().forEach(track => track.stop());
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
+                
+                document.getElementById('recordBtn').disabled = true;
+                document.getElementById('recordBtn').classList.add('recording');
+                document.getElementById('stopBtn').disabled = false;
+                updateStatus('listening', '🎤 Listening...');
+                
+            } catch (error) {
+                alert('Microphone access denied');
+                console.error('Error:', error);
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                isRecording = false;
+                
+                document.getElementById('recordBtn').disabled = false;
+                document.getElementById('recordBtn').classList.remove('recording');
+                document.getElementById('stopBtn').disabled = true;
+                updateStatus('processing', '⚙️ Processing...');
+            }
+        }
+
+        async function processAudio(audioBlob) {
+            try {
+                // Transcribe
+                const formData = new FormData();
+                formData.append('audio', audioBlob);
+
+                const transcribeResponse = await fetch('/api/transcribe', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const transcribeData = await transcribeResponse.json();
+                
+                if (transcribeData.error) throw new Error(transcribeData.error);
+
+                const userMessage = transcribeData.transcript;
+                
+                // Add user message to conversation
+                const userMsgResponse = await fetch(`/api/conversations/${currentConversationId}/messages`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role: 'user', content: userMessage })
+                });
+                const userMsg = await userMsgResponse.json();
+                addMessageToUI(userMsg);
+
+                // Get AI response
+                const chatResponse = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ conversation_id: currentConversationId })
+                });
+
+                const chatData = await chatResponse.json();
+                
+                if (chatData.error) throw new Error(chatData.error);
+
+                const botMessage = chatData.response;
+                
+                // Add bot message to conversation
+                const botMsgResponse = await fetch(`/api/conversations/${currentConversationId}/messages`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role: 'assistant', content: botMessage })
+                });
+                const botMsg = await botMsgResponse.json();
+                addMessageToUI(botMsg);
+
+                // Speak response using Deepgram TTS
+                await speakTextWithDeepgram(botMessage);
+                
+                // Reload conversations to update title if it changed
+                await loadConversations();
+
+            } catch (error) {
+                alert('Error: ' + error.message);
+                updateStatus('idle', 'Ready');
+                console.error('Error:', error);
+            }
+        }
+
+        async function speakTextWithDeepgram(text) {
+            try {
+                updateStatus('speaking', '🔊 Speaking...');
+                
+                // Stop any currently playing audio
+                if (currentAudio) {
+                    currentAudio.pause();
+                    currentAudio = null;
+                }
+                
+                // Call backend TTS endpoint
+                const response = await fetch('/api/text-to-speech', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text })
+                });
+
+                const data = await response.json();
+                
+                if (data.error) throw new Error(data.error);
+
+                // Convert base64 to audio and play
+                const audioBase64 = data.audio;
+                const audioBlob = base64ToBlob(audioBase64, 'audio/mpeg');
+                const audioUrl = URL.createObjectURL(audioBlob);
+                
+                currentAudio = new Audio(audioUrl);
+                
+                currentAudio.onended = () => {
+                    updateStatus('idle', 'Ready');
+                    URL.revokeObjectURL(audioUrl);
+                    currentAudio = null;
+                };
+                
+                currentAudio.onerror = (error) => {
+                    console.error('Audio playback error:', error);
+                    updateStatus('idle', 'Ready');
+                    URL.revokeObjectURL(audioUrl);
+                    currentAudio = null;
+                };
+                
+                await currentAudio.play();
+                
+            } catch (error) {
+                console.error('Speech error:', error);
+                updateStatus('idle', 'Ready');
+            }
+        }
+
+        function base64ToBlob(base64, mimeType) {
+            const byteCharacters = atob(base64);
+            const byteNumbers = new Array(byteCharacters.length);
+            
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            
+            const byteArray = new Uint8Array(byteNumbers);
+            return new Blob([byteArray], { type: mimeType });
+        }
+    </script>
+</body>
+</html>
