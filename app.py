@@ -5,7 +5,7 @@ import requests
 from dotenv import load_dotenv
 from datetime import datetime
 import json
-import traceback  # Added for better error logging
+import traceback  
 
 # Load environment variables from .env file
 load_dotenv()
@@ -345,4 +345,8 @@ def text_to_speech():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Get port from environment variable (for Render deployment)
+    port = int(os.environ.get('PORT', 5000))
+    # Disable debug in production
+    debug_mode = os.environ.get('FLASK_ENV') != 'production'
+    app.run(host='0.0.0.0', port=port, debug=debug_mode)
