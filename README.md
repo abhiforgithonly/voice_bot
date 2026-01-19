@@ -6,9 +6,6 @@ A real-time voice-powered interview assistant that uses AI to answer questions a
 
 This bot acts as your digital representative in interviews, answering questions based on a predefined background story. It listens to your questions, transcribes them, generates natural responses using AI, and speaks back to you—all in real-time.
 
-## 🚀 Live Demo
-
-Deployed on Render: [https://voice-bot-jl0z.onrender.com]
 
 ## 🛠️ Tech Stack
 
